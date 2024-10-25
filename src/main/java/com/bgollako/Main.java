@@ -28,9 +28,7 @@ public class Main {
         List<Long> latencies = Collections.synchronizedList(new ArrayList<>());
         List<String> znodePaths = new ArrayList<>();
 
-        // Assuming we have a predefined list of znode paths or a method to generate them
-        // For demonstration, let's generate some random paths
-        for (int i = 0; i < noOfZNodes; i++) { // Assuming we want to write to 100 znodes
+        for (int i = 0; i < noOfZNodes; i++) { 
             znodePaths.add("/path/to/node/" + i);
         }
 
@@ -70,7 +68,6 @@ public class Main {
             }
         }
 
-        // Calculate and log statistics
         synchronized (latencies) {
             Collections.sort(latencies);
         }
@@ -83,7 +80,7 @@ public class Main {
         System.out.println("90th percentile write latency: " + getPercentile(latencies, 90) + " ns");
         System.out.println("99.99th percentile write latency: " + getPercentile(latencies, 99.99) + " ns");
 
-        return znodePaths; // Return the paths of the written znodes
+        return znodePaths; 
     }
 
     /**
@@ -93,7 +90,53 @@ public class Main {
      * @param noOfClients The number of clients to use for reading ZooKeeper nodes.
      */
     public static void readZNodes(List<String> znodePaths, int noOfClients) {
-        // Implementation similar to the original readZNodes method
+        Thread[] clients = new Thread[noOfClients];
+        List<Long> latencies = Collections.synchronizedList(new ArrayList<>());
+        int znodesPerClient = znodePaths.size() / noOfClients;
+        int remainingZNodes = znodePaths.size() % noOfClients;
+
+        for (int i = 0; i < noOfClients; i++) {
+            final int clientIndex = i;
+            clients[i] = new Thread(() -> {
+                try {
+                    ZooKeeper zooKeeper = new ZooKeeper(ZOOKEEPER_ADDRESS, SESSION_TIMEOUT, null);
+                    int startIndex = clientIndex * znodesPerClient + Math.min(clientIndex, remainingZNodes);
+                    int endIndex = startIndex + znodesPerClient + (clientIndex < remainingZNodes ? 1 : 0);
+
+                    for (int j = startIndex; j < endIndex; j++) {
+                        String znodePath = znodePaths.get(j);
+                        long startTime = System.nanoTime();
+                        byte[] data = zooKeeper.getData(znodePath, null, null);
+                        long endTime = System.nanoTime();
+                        long latency = endTime - startTime;
+                        latencies.add(latency);
+                        System.out.println("Read latency for " + znodePath + ": " + latency + " ns");
+                    }
+                    zooKeeper.close();
+                } catch (IOException | KeeperException | InterruptedException e) {
+                    e.printStackTrace();
+                }
+            });
+            clients[i].start();
+        }
+
+        for (Thread client : clients) {
+            try {
+                client.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
+        Collections.sort(latencies);
+        long totalLatency = latencies.stream().mapToLong(Long::longValue).sum();
+        double avgLatency = totalLatency / (double) latencies.size();
+        
+        System.out.println("Total read latency: " + totalLatency + " ns");
+        System.out.println("Average read latency: " + avgLatency + " ns");
+        System.out.println("50th percentile read latency: " + getPercentile(latencies, 50) + " ns");
+        System.out.println("90th percentile read latency: " + getPercentile(latencies, 90) + " ns");
+        System.out.println("99.99th percentile read latency: " + getPercentile(latencies, 99.99) + " ns");
     }
 
     /**
@@ -112,9 +155,9 @@ public class Main {
      * Main method to start the application.
      */
     public static void main(String[] args) {
-        int numberOfClients = Integer.parseInt(args[0]); // Assuming we want to use 5 clients
-        int numberOfZNodes = Integer.parseInt(args[1]); // Assuming we want to write to 100 znodes
-        List<String> znodePaths = writeZNodes(numberOfClients, numberOfZNodes); // Write to ZooKeeper nodes and get the paths
-        readZNodes(znodePaths, numberOfClients); // Read from the ZooKeeper nodes
+        int numberOfClients = Integer.parseInt(args[0]); 
+        int numberOfZNodes = Integer.parseInt(args[1]); 
+        List<String> znodePaths = writeZNodes(numberOfClients, numberOfZNodes); 
+        readZNodes(znodePaths, numberOfClients); 
     }
 }
