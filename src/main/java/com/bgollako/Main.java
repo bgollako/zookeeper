@@ -1,163 +1,65 @@
 package com.bgollako;
 
-import org.apache.zookeeper.ZooKeeper;
-import org.apache.zookeeper.KeeperException;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
+import com.bgollako.latency.Latency;
 import java.util.List;
-import java.util.UUID;
+import com.bgollako.contest.Contestants;
 
 /**
  * Main class for ZooKeeper operations.
+ * This class provides a starting point for the application, allowing for the execution of ZooKeeper operations.
  */
 public class Main {
-    private static final String ZOOKEEPER_ADDRESS = "localhost:2181"; // Change to your Zookeeper address
-    private static final int SESSION_TIMEOUT = 3000;
-
     /**
-     * Writes data to ZooKeeper nodes in parallel using multiple clients and returns the paths of the written nodes.
-     * 
-     * @param noOfClients The number of clients to use for writing to ZooKeeper nodes.
-     * @param noOfZNodes The number of ZooKeeper nodes to write to.
-     * @return A list of paths to the ZooKeeper nodes that were written.
+     * The address of the ZooKeeper server to connect to.
+     * This should be replaced with the actual ZooKeeper server address in your environment.
      */
-    public static List<String> writeZNodes(int noOfClients, int noOfZNodes) {
-        Thread[] clients = new Thread[noOfClients];
-        List<Long> latencies = Collections.synchronizedList(new ArrayList<>());
-        List<String> znodePaths = new ArrayList<>();
-
-        for (int i = 0; i < noOfZNodes; i++) { 
-            znodePaths.add("/path/to/node/" + i);
-        }
-
-        int znodesPerClient = znodePaths.size() / noOfClients;
-        int remainingZNodes = znodePaths.size() % noOfClients;
-
-        for (int i = 0; i < noOfClients; i++) {
-            final int clientIndex = i;
-            clients[i] = new Thread(() -> {
-                try {
-                    ZooKeeper zooKeeper = new ZooKeeper(ZOOKEEPER_ADDRESS, SESSION_TIMEOUT, null);
-                    int startIndex = clientIndex * znodesPerClient + Math.min(clientIndex, remainingZNodes);
-                    int endIndex = startIndex + znodesPerClient + (clientIndex < remainingZNodes ? 1 : 0);
-
-                    for (int j = startIndex; j < endIndex; j++) {
-                        String znodePath = znodePaths.get(j);
-                        long startTime = System.nanoTime();
-                        zooKeeper.setData(znodePath, UUID.randomUUID().toString().getBytes(), -1);
-                        long endTime = System.nanoTime();
-                        long latency = endTime - startTime;
-                        latencies.add(latency);
-                        System.out.println("Write latency for " + znodePath + ": " + latency + " ns");
-                    }
-                    zooKeeper.close();
-                } catch (IOException | KeeperException | InterruptedException e) {
-                    e.printStackTrace();
-                }
-            });
-            clients[i].start();
-        }
-
-        for (Thread client : clients) {
-            try {
-                client.join();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-
-        synchronized (latencies) {
-            Collections.sort(latencies);
-        }
-        long totalLatency = latencies.stream().mapToLong(Long::longValue).sum();
-        double avgLatency = totalLatency / (double) latencies.size();
-        
-        System.out.println("Total write latency: " + totalLatency + " ns");
-        System.out.println("Average write latency: " + avgLatency + " ns");
-        System.out.println("50th percentile write latency: " + getPercentile(latencies, 50) + " ns");
-        System.out.println("90th percentile write latency: " + getPercentile(latencies, 90) + " ns");
-        System.out.println("99.99th percentile write latency: " + getPercentile(latencies, 99.99) + " ns");
-
-        return znodePaths; 
-    }
-
+    public static final String ZOOKEEPER_ADDRESS = "localhost:2181";
     /**
-     * Reads ZooKeeper nodes in parallel using multiple clients.
-     * 
-     * @param znodePaths The list of ZooKeeper node paths to read.
-     * @param noOfClients The number of clients to use for reading ZooKeeper nodes.
+     * The session timeout in milliseconds for ZooKeeper connections.
      */
-    public static void readZNodes(List<String> znodePaths, int noOfClients) {
-        Thread[] clients = new Thread[noOfClients];
-        List<Long> latencies = Collections.synchronizedList(new ArrayList<>());
-        int znodesPerClient = znodePaths.size() / noOfClients;
-        int remainingZNodes = znodePaths.size() % noOfClients;
-
-        for (int i = 0; i < noOfClients; i++) {
-            final int clientIndex = i;
-            clients[i] = new Thread(() -> {
-                try {
-                    ZooKeeper zooKeeper = new ZooKeeper(ZOOKEEPER_ADDRESS, SESSION_TIMEOUT, null);
-                    int startIndex = clientIndex * znodesPerClient + Math.min(clientIndex, remainingZNodes);
-                    int endIndex = startIndex + znodesPerClient + (clientIndex < remainingZNodes ? 1 : 0);
-
-                    for (int j = startIndex; j < endIndex; j++) {
-                        String znodePath = znodePaths.get(j);
-                        long startTime = System.nanoTime();
-                        byte[] data = zooKeeper.getData(znodePath, null, null);
-                        long endTime = System.nanoTime();
-                        long latency = endTime - startTime;
-                        latencies.add(latency);
-                        System.out.println("Read latency for " + znodePath + ": " + latency + " ns");
-                    }
-                    zooKeeper.close();
-                } catch (IOException | KeeperException | InterruptedException e) {
-                    e.printStackTrace();
-                }
-            });
-            clients[i].start();
-        }
-
-        for (Thread client : clients) {
-            try {
-                client.join();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-
-        Collections.sort(latencies);
-        long totalLatency = latencies.stream().mapToLong(Long::longValue).sum();
-        double avgLatency = totalLatency / (double) latencies.size();
-        
-        System.out.println("Total read latency: " + totalLatency + " ns");
-        System.out.println("Average read latency: " + avgLatency + " ns");
-        System.out.println("50th percentile read latency: " + getPercentile(latencies, 50) + " ns");
-        System.out.println("90th percentile read latency: " + getPercentile(latencies, 90) + " ns");
-        System.out.println("99.99th percentile read latency: " + getPercentile(latencies, 99.99) + " ns");
-    }
-
-    /**
-     * Calculates the latency at a given percentile from a list of latencies.
-     * 
-     * @param latencies The list of latencies.
-     * @param percentile The percentile to calculate.
-     * @return The latency at the specified percentile.
-     */
-    private static long getPercentile(List<Long> latencies, double percentile) {
-        int index = (int) Math.ceil(percentile / 100.0 * latencies.size()) - 1;
-        return latencies.get(index);
-    }
+    public static final int SESSION_TIMEOUT = 3000;
 
     /**
      * Main method to start the application.
+     * This method initiates the ZooKeeper operations by calling the testContest method.
+     * 
+     * @param args Command line arguments (not used in this application)
      */
     public static void main(String[] args) {
-        int numberOfClients = Integer.parseInt(args[0]); 
-        int numberOfZNodes = Integer.parseInt(args[1]); 
-        List<String> znodePaths = writeZNodes(numberOfClients, numberOfZNodes); 
-        readZNodes(znodePaths, numberOfClients); 
+        testContest();
+    }
+
+    /**
+     * Method to test the contest functionality.
+     * This method creates a Contestants instance and starts it in a new thread.
+     * It then waits for the thread to finish.
+     */
+    static void testContest() {
+        Contestants contestants = new Contestants(
+            ZOOKEEPER_ADDRESS, 
+            "/contest", 
+            3
+        );
+        Thread thread = new Thread(() -> {
+            try {
+                contestants.start();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+        thread.start();
+
+    }
+
+    /**
+     * Method to test the latency of ZooKeeper operations.
+     * This method simulates the creation, reading, and deletion of ZooKeeper nodes to measure latency.
+     */
+    static void testLatency() {
+        int numberOfClients = 1; // Number of clients to simulate
+        int numberOfZNodes = 10000; // Number of ZooKeeper nodes to create
+        List<String> znodePaths = Latency.writeZNodes(numberOfClients, numberOfZNodes); // Create ZooKeeper nodes
+        Latency.readZNodes(znodePaths, numberOfClients); // Read the created ZooKeeper nodes
+        Latency.deleteZNodes(znodePaths, numberOfClients); // Delete the created ZooKeeper nodes
     }
 }

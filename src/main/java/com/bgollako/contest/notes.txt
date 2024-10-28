@@ -1,0 +1,6 @@
+1. Create a parent znode with given topic
+2. Create ephemeral sequential znode under the parent znode
+3. If the znode is the smallest, it is the leader
+4. If it is not the smallest, watch the parent znode and wait for the leader to delete its znode
+5. When the leader's znode is deleted, the contestant will become the new leader and the process will repeat
+6. If the contestant is the leader, do nothing
