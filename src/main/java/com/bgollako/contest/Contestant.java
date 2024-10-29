@@ -70,7 +70,7 @@ public class Contestant implements Watcher {
             this.zooKeeper = new ZooKeeper(
                 address, 
                 3000, 
-                null);
+                this);
         } catch (IOException e) {
             logger.error("Failed to connect to ZooKeeper", e);
             throw new Exception("Failed to connect to ZooKeeper");
@@ -188,6 +188,20 @@ public class Contestant implements Watcher {
                     this.checkLeader();
                 } catch (Exception e) {
                     logger.error("Error during leader check", e);
+                }
+                break;
+            case None:
+                switch (event.getState()) {
+                    case Disconnected:
+                    case Expired:
+                        logger.error("Disconnected from ZooKeeper");
+                        break;
+                    case SyncConnected:
+                        logger.info("Connected to ZooKeeper");
+                        break;
+                    default:
+                        logger.error("Unknown state: " + event.getState());
+                        break;
                 }
                 break;
             default:
