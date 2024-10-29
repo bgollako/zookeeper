@@ -42,9 +42,6 @@ public class Contestant implements Watcher {
     /** The executor service for this contestant */
     private ExecutorService executor;
 
-    /** The boolean flag to indicate if the contestant is the leader */
-    private boolean isLeader;
-
     /**
      * Creates a new Contestant instance and establishes connection with ZooKeeper.
      * This constructor initializes the ZooKeeper connection, creates a parent znode if it doesn't exist,
@@ -60,7 +57,6 @@ public class Contestant implements Watcher {
         this.rand = new Random();
         this.executor = executor;
         this.name = name;
-        this.isLeader = false;
     }
 
     /**
@@ -122,7 +118,6 @@ public class Contestant implements Watcher {
         String current = this.znodePath.substring(this.parentPath.length() + 1);
         if (smallest.equals(current)) {
             logger.info("Contestant " + this.name + " with znode " + this.znodePath + " is the leader");
-            this.isLeader = true;
             this.scheduleNodeDeletion();
         } else {
             int parent = Collections.binarySearch(children, current)-1;
@@ -136,7 +131,6 @@ public class Contestant implements Watcher {
             try {
                 Thread.sleep(this.generateRandomNumber(5000, 10000));
                 this.deleteZnode();
-                this.isLeader = false;
                 this.contest();                
             } catch (Exception e) {
                 logger.error("Error during node deletion or contest restart", e);
