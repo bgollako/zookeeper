@@ -12,9 +12,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import org.apache.log4j.Logger;
 
 public class Latency {
-        /**
+    private static final Logger logger = Logger.getLogger(Latency.class);
+
+    /**
      * Writes data to ZooKeeper nodes in parallel using multiple clients and returns the paths of the written nodes.
      * 
      * @param noOfClients The number of clients to use for writing to ZooKeeper nodes.
@@ -71,11 +74,11 @@ public class Latency {
         long totalLatency = latencies.stream().mapToLong(Long::longValue).sum();
         double avgLatency = totalLatency / (double) latencies.size();
         
-        System.out.println("Total write latency: " + totalLatency + " ns");
-        System.out.println("Average write latency: " + avgLatency + " ns");
-        System.out.println("50th percentile write latency: " + getPercentile(latencies, 50) + " ns");
-        System.out.println("90th percentile write latency: " + getPercentile(latencies, 90) + " ns");
-        System.out.println("99.99th percentile write latency: " + getPercentile(latencies, 99.99) + " ns");
+        logger.info("Total write latency: " + totalLatency + " ns");
+        logger.info("Average write latency: " + avgLatency + " ns");
+        logger.info("50th percentile write latency: " + getPercentile(latencies, 50) + " ns");
+        logger.info("90th percentile write latency: " + getPercentile(latencies, 90) + " ns");
+        logger.info("99.99th percentile write latency: " + getPercentile(latencies, 99.99) + " ns");
 
         return znodePaths; 
     }
@@ -128,11 +131,11 @@ public class Latency {
         long totalLatency = latencies.stream().mapToLong(Long::longValue).sum();
         double avgLatency = totalLatency / (double) latencies.size();
         
-        System.out.println("Total read latency: " + totalLatency + " ns");
-        System.out.println("Average read latency: " + avgLatency + " ns");
-        System.out.println("50th percentile read latency: " + getPercentile(latencies, 50) + " ns");
-        System.out.println("90th percentile read latency: " + getPercentile(latencies, 90) + " ns");
-        System.out.println("99.99th percentile read latency: " + getPercentile(latencies, 99.99) + " ns");
+        logger.info("Total read latency: " + totalLatency + " ns");
+        logger.info("Average read latency: " + avgLatency + " ns");
+        logger.info("50th percentile read latency: " + getPercentile(latencies, 50) + " ns");
+        logger.info("90th percentile read latency: " + getPercentile(latencies, 90) + " ns");
+        logger.info("99.99th percentile read latency: " + getPercentile(latencies, 99.99) + " ns");
     }
 
     /**
@@ -183,11 +186,11 @@ public class Latency {
         long totalLatency = latencies.stream().mapToLong(Long::longValue).sum();
         double avgLatency = totalLatency / (double) latencies.size();
         
-        System.out.println("Total delete latency: " + totalLatency + " ns");
-        System.out.println("Average delete latency: " + avgLatency + " ns");
-        System.out.println("50th percentile delete latency: " + getPercentile(latencies, 50) + " ns");
-        System.out.println("90th percentile delete latency: " + getPercentile(latencies, 90) + " ns");
-        System.out.println("99.99th percentile delete latency: " + getPercentile(latencies, 99.99) + " ns");
+        logger.info("Total delete latency: " + totalLatency + " ns");
+        logger.info("Average delete latency: " + avgLatency + " ns");
+        logger.info("50th percentile delete latency: " + getPercentile(latencies, 50) + " ns");
+        logger.info("90th percentile delete latency: " + getPercentile(latencies, 90) + " ns");
+        logger.info("99.99th percentile delete latency: " + getPercentile(latencies, 99.99) + " ns");
     }
 
     /**

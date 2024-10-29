@@ -13,11 +13,15 @@ import java.util.List;
 import java.util.Collections;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
+import org.apache.log4j.Logger;
+
 /**
  * Represents a contestant that interacts with ZooKeeper for distributed coordination.
  * This class manages ZooKeeper znodes for a contestant in a distributed system.
  */
 public class Contestant implements Watcher {
+    private static final Logger logger = Logger.getLogger(Contestant.class);
+
     /** The name of the contestant */
     private String name;
     /** The ZooKeeper server address */
@@ -72,14 +76,14 @@ public class Contestant implements Watcher {
                 3000, 
                 null);
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("Failed to connect to ZooKeeper", e);
             throw new Exception("Failed to connect to ZooKeeper");
         }
 
         // Create parent znode
         try {
             this.createZnode(this.parentPath, CreateMode.PERSISTENT);
-            System.out.println("Parent znode created : " + this.parentPath);
+            logger.info("Parent znode created : " + this.parentPath);
         } catch (NodeExistsException e) {
             // Parent znode already exists
         }
@@ -96,7 +100,7 @@ public class Contestant implements Watcher {
      */
     private void contest() throws Exception {
         this.znodePath = this.createZnode(this.parentPath + "/contestant", CreateMode.EPHEMERAL_SEQUENTIAL);
-        System.out.println("Contestant " + this.name + " created znode " + this.znodePath);
+        logger.info("Contestant " + this.name + " created znode " + this.znodePath);
         this.checkLeader();
     }
 
@@ -117,7 +121,7 @@ public class Contestant implements Watcher {
         String smallest = children.get(0);
         String current = this.znodePath.substring(this.parentPath.length() + 1);
         if (smallest.equals(current)) {
-            System.out.println("Contestant " + this.name + " with znode " + this.znodePath + " is the leader");
+            logger.info("Contestant " + this.name + " with znode " + this.znodePath + " is the leader");
             this.isLeader = true;
             this.scheduleNodeDeletion();
         } else {
@@ -135,7 +139,7 @@ public class Contestant implements Watcher {
                 this.isLeader = false;
                 this.contest();                
             } catch (Exception e) {
-                e.printStackTrace();
+                logger.error("Error during node deletion or contest restart", e);
             }
         });
     }
@@ -152,7 +156,7 @@ public class Contestant implements Watcher {
             this.zooKeeper.delete(this.znodePath, -1);
             return true;
         } catch (KeeperException | InterruptedException e) {
-            e.printStackTrace();
+            logger.error("Failed to delete znode", e);
             return false;
         }
     }
@@ -189,7 +193,7 @@ public class Contestant implements Watcher {
                 try {
                     this.checkLeader();
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    logger.error("Error during leader check", e);
                 }
                 break;
             default:
@@ -215,7 +219,7 @@ public class Contestant implements Watcher {
         try {
             this.zooKeeper.close();
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            logger.error("Error closing ZooKeeper connection", e);
         }
     }
 }

@@ -4,12 +4,15 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import org.apache.log4j.Logger;
 
 /**
  * Represents a group of contestants that interact with ZooKeeper for distributed coordination.
  * This class manages ZooKeeper znodes for a group of contestants in a distributed system.
  */
 public class Contestants {
+    private static final Logger logger = Logger.getLogger(Contestants.class);
+
     /** The list of contestants */
     private List<Contestant> contestants;
     
@@ -57,7 +60,7 @@ public class Contestants {
                 try {
                     contestant.start();
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    logger.error("Error starting contestant", e);
                 }
             });
             this.contestants.add(contestant);
